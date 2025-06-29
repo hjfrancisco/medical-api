@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      Role 
+  hasChangedPassword  Boolean  @default(false)    
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones 1 a 1 opcionales con los perfiles
+  patientProfile  Patient?
+  doctorProfile   Doctor?
+  adminProfile    Admin?
+}
+
+model Patient {
+  id          Int      @id @default(autoincrement())
+  firstName   String
+  lastName    String
+  idNumber    String   @unique
+  address     String?
+  dateOfBirth DateTime?
+  phone       String?
+
+  // Relación 1 a 1 con User. 'userId' debe ser único.
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int      @unique
+
+  studies     Study[]
+}
+
+model Doctor {
+  id        Int      @id @default(autoincrement())
+  name      String
+
+  // Relación 1 a 1 con User. 'userId' debe ser único.
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int      @unique
+
+  studies   Study[]
+}
+
+// Nuevo modelo para el perfil del administrador
+model Admin {
+  id        Int      @id @default(autoincrement())
+  name      String
+  position  String?
+
+  // Relación 1 a 1 con User. 'userId' debe ser único.
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int      @unique
+}
+
+enum Role {
+  PATIENT
+  ADMIN
+  DOCTOR
+}
+
+model StudyType {
+  id      Int     @id @default(autoincrement())
+  name    String  @unique
+  studies Study[]
+}
+
+model Study {
+  id                  Int       @id @default(autoincrement())
+  name                String
+  date                DateTime  // Fecha en que se realizó el estudio
+  status              String    @default("INCOMPLETO") // Para saber si falta el informe
+  reportUploadedAt    DateTime? // <-- AÑADE ESTA LÍNEA. El '?' lo hace opcional.
+
+  patient             Patient   @relation(fields: [patientId], references: [id])
+  patientId           Int
+
+  studyType           StudyType @relation(fields: [studyTypeId], references: [id])
+  studyTypeId         Int
+
+  requestingDoctor    Doctor    @relation(fields: [requestingDoctorId], references: [id])
+  requestingDoctorId  Int
+
+  // 'files' ahora puede contener la llave del estudio y la del informe
+  files               Json?
+
+  createdAt           DateTime  @default(now())
+}
